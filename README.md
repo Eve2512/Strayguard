@@ -72,3 +72,44 @@ repos:
       - id: strayguard
 ```
 
+
+## What you'll see
+
+### Everything belongs
+
+Nothing, your commit goes through as normal.
+
+```text
+$ git commit -m "add login page"
+[main 4f2a91c] add login page
+ 3 files changed, 120 insertions(+)
+```
+
+### Something looks wrong
+
+```text
+$ git commit -m "add login page"
+
+⚠ strayguard: 2 new files look like they don't belong
+
+  test_fix2.py         scratch / leftover   91%
+  debug_output.json    output dump          87%
+
+  [u] unstage   [g] add to .gitignore   [k] keep and commit   [o] one by one
+  > g
+
+  ✓ Added 2 lines to .gitignore and staged .gitignore.
+  ✓ Unstaged 2 files. They are still on your disk.
+
+  Commit stopped so you can check. Run git commit again.
+```
+
+| Key | What it does |
+|---|---|
+| `u` | Takes the files out of this commit. They stay on your disk. |
+| `g` | Adds the files to `.gitignore` so this never happens again, and takes them out of this commit. |
+| `k` | Commits the files anyway. strayguard won't ask about them again. |
+| `o` | Lets you choose `u`, `g` or `k` for each file. |
+| Enter | Same as `k`. |
+
+strayguard **never deletes files**. It stops the commit only if it changed something for you, so you can check before you commit again.
