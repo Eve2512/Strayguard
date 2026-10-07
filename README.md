@@ -129,3 +129,22 @@ When strayguard can't ask you a question, it warns and lets the commit through:
 ```
 
 To block the commit instead, set `STRAYGUARD_STRICT=1`, this is a good setting for coding-agent sessions.
+
+
+### Files caught by a local rule
+
+These files are never sent to Jev, so they show `rule` instead of a percentage:
+
+```text
+  .env.local           local only           rule
+```
+
+### When strayguard can't check
+
+It prints one line and gets out of your way:
+
+```text
+strayguard: no TYPESAFE_API_KEY set, check skipped.
+strayguard: Jev did not answer in 5 s, check skipped.
+```
+
