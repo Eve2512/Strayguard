@@ -147,4 +147,26 @@ It prints one line and gets out of your way:
 strayguard: no TYPESAFE_API_KEY set, check skipped.
 strayguard: Jev did not answer in 5 s, check skipped.
 ```
+## Cost and speed
+
+- A typical commit costs less than $0.0001.
+- The check usually finishes in under a second.
+- Each file's answer is cached by its content, so running the commit again is instant and free.
+
+## Uninstall
+
+```bash
+strayguard uninstall
+```
+
+This removes the hook only if strayguard wrote it.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `strayguard install` | Add the pre-commit hook to this repo |
+| `strayguard uninstall` | Remove the hook |
+| `strayguard check` | Run the check on staged new files (the hook runs this) |
+| `strayguard --version` | Show the version |
 
