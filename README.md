@@ -58,3 +58,17 @@ strayguard install
 ```
 
 That's it, there's no config file
+
+
+### With the pre-commit framework
+
+Add this to `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/<you>/strayguard
+    rev: v1.0.0
+    hooks:
+      - id: strayguard
+```
+
