@@ -24,3 +24,12 @@ Whatever coding tool you use most likely miss most of these files:
 | **strayguard** | **Files that don't look like part of the project** | Changes to files git already tracks |
 
 ### How it works
+
+1. You run ```git commit```.
+2. strayguard looks only at files that are **new** in this commit.
+3. A few local rules run first, such as ```.env``` and ```.DS_Store```. Files they match are never sent anywhere.
+4. For the other files, Jev picks one category: **belongs**, **scratch / leftover**, **output dump**, **build output** or **local only**.
+5. If Jev is at least 70% sure a file doesn't belong, strayguard shows it to you.
+6. If everything belongs, you see nothing.
+
+Jev never writes text(not good for that anyways) It only picks a category and returns a probability. The same file always gets the same answer, because strayguard caches the result.
