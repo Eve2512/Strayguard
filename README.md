@@ -23,6 +23,7 @@ Whatever coding tool you use most likely miss most of these files:
 | Large-file checks | Big files | Small junk files |
 | **strayguard** | **Files that don't look like part of the project** | Changes to files git already tracks |
 
+
 ### How it works
 
 1. You run ```git commit```.
@@ -33,3 +34,27 @@ Whatever coding tool you use most likely miss most of these files:
 6. If everything belongs, you see nothing.
 
 Jev never writes text(not good for that anyways) It only picks a category and returns a probability. The same file always gets the same answer, because strayguard caches the result.
+
+### Install
+
+You need Python 3.9+ and a [TypeSafe API key](https://console.typesafe.ai/keys).
+
+```bash
+pipx install strayguard
+```
+
+```bash
+export TYPESAFE_API_KEY=your-key
+```
+
+Then, inside your repo:
+
+```bash
+strayguard install
+```
+
+```text
+✓ strayguard installed in .git/hooks/pre-commit
+```
+
+That's it, there's no config file
