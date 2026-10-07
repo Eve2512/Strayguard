@@ -113,3 +113,19 @@ $ git commit -m "add login page"
 | Enter | Same as `k`. |
 
 strayguard **never deletes files**. It stops the commit only if it changed something for you, so you can check before you commit again.
+
+
+### GUI clients, CI and coding agents
+
+When strayguard can't ask you a question, it warns and lets the commit through:
+```text
+⚠ strayguard: 2 new files may not belong (not blocking)
+
+  test_fix2.py         scratch / leftover   91%
+  debug_output.json    output dump          87%
+
+  To unstage them:
+    git rm --cached -- test_fix2.py debug_output.json
+```
+
+To block the commit instead, set `STRAYGUARD_STRICT=1`, this is a good setting for coding-agent sessions.
