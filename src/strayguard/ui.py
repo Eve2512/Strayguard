@@ -83,3 +83,35 @@ def _ask(question: str, keys: str) -> str:
                 return answer
 
 
+def prompt(verdicts: list) -> dict:
+    """SG-61 to SG-63. Return {"u": [...], "g": [...], "k": [...]}."""
+    _header(verdicts, "looks like it doesn't belong" if len(verdicts) == 1
+            else "look like they don't belong")
+    _say()
+    _say("  [u] unstage   [g] add to .gitignore   [k] keep and commit   [o] one by one")
+    key = _ask("  > ", "ugko")
+    if key != "o":
+        return {k: list(verdicts) if k == key else [] for k in "ugk"}
+    choices = {"u": [], "g": [], "k": []}
+    for v, row in zip(verdicts, _rows(verdicts)):
+        choices[_ask(f"{row}   [u/g/k] > ", "ugk")].append(v)
+    return choices
+
+
+def report(choices: dict) -> None:
+    """Say what strayguard did, then say if the commit stopped (SG-68)."""
+    tick = _color("32", "✓")
+    _say()
+    if choices["g"]:
+        _say(f"  {tick} Added {_files(len(choices['g']), 'file')} to .gitignore and staged .gitignore.")
+    removed = len(choices["u"]) + len(choices["g"])
+    if removed:
+        _say(f"  {tick} Unstaged {_files(removed, 'file')}. They are still on your disk.")
+    if choices["k"]:
+        _say(f"  {tick} Kept {_files(len(choices['k']), 'file')}. strayguard will not ask about them again.")
+    if removed:
+        _say()
+        _say("  Commit stopped so you can check. Run git commit again.")
+    _say()
+
+
