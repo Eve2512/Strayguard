@@ -3,23 +3,37 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name =
-version =
-description =
-reasdme =
-requires-python =
-licence =
-authors =
-Keywords =
-classifiers = 
-dependencies =
+name = "strayguard"
+version = "0.1.0"
+description = "A git pre-commit hook that asks TypeSafe Jev whether each new file belongs in your repo."
+readme = "README.md"
+requires-python = ">=3.9"
+licence =  "MIT"
+authors = [{ name = "Eva Hill" }]
+Keywords = ["git", "pre-commit", "hook", "gitignore", "jev", "typesafe"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+dependencies = []
 
 [project.optional-dependencies]
+dev = ["pytest>=8"]
 
 [project.urls]
+Homepage = "https://github.com/Eve2512/Strayguard"
+Issues = "https://github.com/Eve2512/Strayguard/issues"
 
 [project.scripts]
+strayguard = "strayguard.cli:main"
 
 [tool.hatch.build.targets.wheel]
+packages = ["src/strayguard"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests/unit"]
