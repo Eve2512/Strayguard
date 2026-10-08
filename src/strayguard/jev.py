@@ -84,3 +84,34 @@ def _question(fid: str, is_folder: bool) -> dict:
 def _is_valid(answer: dict) -> bool:
     return answer.get("choice") in OPTIONS and isinstance(answer.get("probabilities"), dict)
 
+
+def _post(body: dict, api_key: str, deadline: float) -> dict:
+    """SG-40, SG-81, SG-82. The API key never appears in an error message."""
+    request = urllib.request.Request(
+        ENDPOINT,
+        data=json.dumps(body).encode(),
+        headers={"Authorization": f"Bearer {api_key}",
+                 "Content-Type": "application/json",
+                 "User-Agent": f"strayguard/{__version__}"},
+    )
+    for attempt in (1, 2):
+        timeout = min(REQUEST_TIMEOUT, deadline - time.monotonic())
+        if timeout <= 0:
+            raise JevError(f"Jev did not answer in {TOTAL_TIMEOUT:g} s")
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            if error.code in RETRY_STATUSES and attempt == 1:
+                time.sleep(1.0)
+                continue
+            raise JevError(f"Jev returned HTTP {error.code}") from None
+        except (socket.timeout, TimeoutError):
+            raise JevError(f"Jev did not answer in {TOTAL_TIMEOUT:g} s") from None
+        except urllib.error.URLError as error:
+            if isinstance(error.reason, (socket.timeout, TimeoutError)):
+                raise JevError(f"Jev did not answer in {TOTAL_TIMEOUT:g} s") from None
+            raise JevError(f"could not reach Jev ({error.reason})") from None
+        except ValueError:
+            raise JevError("Jev sent a response that is not JSON") from None
+
