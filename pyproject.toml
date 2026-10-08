@@ -3,6 +3,16 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
+name =
+version =
+description =
+reasdme =
+requires-python =
+licence =
+authors =
+Keywords =
+classifiers = 
+dependencies =
 
 [project.optional-dependencies]
 
