@@ -47,3 +47,8 @@ def decide(items: list, answers: dict, threshold: float) -> list[Verdict]:
             choice = answer["choice"]
             verdicts.append(Verdict(item, choice, answer["probabilities"][choice]))
     return verdicts
+
+class Store:
+    """The kept list and the answer cache in .git/strayguard/ (SG-50 to SG-54)."""
+    
+    def
