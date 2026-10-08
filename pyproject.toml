@@ -8,9 +8,9 @@ version = "0.1.0"
 description = "A git pre-commit hook that asks TypeSafe Jev whether each new file belongs in your repo."
 readme = "README.md"
 requires-python = ">=3.9"
-licence =  "MIT"
+license =  "MIT"
 authors = [{ name = "Eva Hill" }]
-Keywords = ["git", "pre-commit", "hook", "gitignore", "jev", "typesafe"]
+keywords = ["git", "pre-commit", "hook", "gitignore", "jev", "typesafe"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
