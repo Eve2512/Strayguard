@@ -100,10 +100,39 @@ def install() -> int:
     return 0
 
 
+def uninstall() -> int:
+    hook = git.hooks_dir() / "pre-commit"
+    if hook.exists() and MARKER in hook.read_text(errors="replace"):
+        hook.unlink()
+        print(f"✓ strayguard removed from {hook}")
+    else:
+        print("strayguard hook not found. Nothing to remove.")
+    return 0
 
 
+COMMANDS = {"install": install, "uninstall": uninstall, "check": check}
 
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="strayguard",
+        description="Catch files that do not belong before you commit them.",
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("install", help="add the pre-commit hook to this repository")
+    commands.add_parser("uninstall", help="remove the pre-commit hook")
+    commands.add_parser("check", help="check the staged new files (the hook runs this)")
+    args = parser.parse_args(argv)
 
-
-
-
+    try:
+        return COMMANDS[args.command]()
+    except KeyboardInterrupt:
+        return 130
+    except git.GitError as error:
+        ui.note(str(error))
+        return 0 if args.command == "check" else 1
+    except Exception as error:
+        if args.command != "check":
+            raise
+        ui.note(f"internal error ({error!r}), check skipped.")
+        return 0
