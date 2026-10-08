@@ -57,4 +57,53 @@ def check() -> int:
     return act(verdicts, store)
 
 
+def ask_jev(items: list, model: str) -> dict:
+    """Ask Jev. On any failure, show one line and return no answers (fail open)."""
+    api_key = os.environ.get("TYPESAFE_API_KEY")
+    if not api_key:
+        ui.note("no TYPESAFE_API_KEY set, check skipped.")
+        return {}
+    try:
+        return jev.ask(items, api_key, model)
+    except jev.JevError as error:
+        ui.note(f"{error}, check skipped.")
+        return {}
+
+
+def act(verdicts: list, store: decide.Store) -> int:
+    """Show the verdicts and do what the user chooses (SG-60 to SG-73)."""
+    if not ui.can_prompt():
+        ui.warn(verdicts)
+        return 1 if os.environ.get("STRAYGUARD_STRICT") == "1" else 0
+
+    choices = ui.prompt(verdicts)
+    store.keep(v.item for v in choices["k"])
+    if choices["g"]:
+        git.add_to_gitignore([v.item for v in choices["g"]])
+    removed = choices["u"] + choices["g"]
+    if removed:
+        git.unstage([v.item.path for v in removed])
+    ui.report(choices)
+    return 1 if removed else 0
+
+
+def install() -> int:
+    hook = git.hooks_dir() / "pre-commit"
+    if hook.exists() and MARKER not in hook.read_text(errors="replace"):
+        print(f"{hook} already exists. Add this line to it:\n  strayguard check")
+        return 1
+    exe = shutil.which("strayguard") or os.path.abspath(sys.argv[0])
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    hook.write_text(HOOK.format(exe=exe))
+    hook.chmod(0o755)
+    print(f"✓ strayguard installed in {hook}")
+    return 0
+
+
+
+
+
+
+
+
 
