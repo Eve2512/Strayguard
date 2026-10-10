@@ -43,5 +43,34 @@ class FakeJev(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def server(monkeypatch):
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), FakeJev)
+    threading.Thread(target=httpd.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
+    FakeJev.script, FakeJev.requests = [], []
+    monkeypatch.setattr(jev, "ENDPOINT", f"http://127.0.0.1:{httpd.server_port}")
+    monkeypatch.setattr(jev, "REQUEST_TIMEOUT", 0.4)
+    monkeypatch.setattr(jev, "TOTAL_TIMEOUT", 0.5)
+    yield FakeJev
+    httpd.shutdown()
+
+
+def items(count):
+    return [SimpleNamespace(key=f"k{i}", is_folder=False, evidence={"path": f"f{i}.py"})
+            for i in range(count)]
+
+
+def ask(count=2):
+    return jev.ask(items(count), ["src/"], KEY, "jev-latest")
+
+
+def test_request_shape(server):
+    assert ask() == {"k0": {"choice": "scratch", "probabilities": {"scratch": 0.9}},
+                     "k1": {"choice": "scratch", "probabilities": {"scratch": 0.9}}}
+    headers, body = server.requests[0]
+    assert headers["Authorization"] == f"Bearer {KEY}"
+    assert body["state"]["repo"] == {"top_level": ["src/"]}
+    assert list(body["questions"]["f1"]["criteria"])[0] == "belongs"
+    assert "`files.f1`" in body["questions"]["f1"]["instructions"]
+
+
  
 
