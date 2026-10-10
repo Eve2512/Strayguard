@@ -39,3 +39,32 @@ def test_decide_skips_items_without_answer():
     verdicts = decide.decide(items, answers, 0.70)
     assert [(v.item.key, v.category, v.probability) for v in verdicts] == [("a", "scratch", 0.9)]
 
+
+def test_cache_round_trip(tmp_path):  # T-14
+    store = decide.Store(tmp_path / "sg", "jev-1", "1")
+    store.remember({"a": {**answer("scratch", 0.9), "confidence": 0.8}})
+    again = decide.Store(tmp_path / "sg", "jev-1", "1")
+    assert again.cached_answer(item("a")) == answer("scratch", 0.9)
+
+
+def test_cache_key_includes_model_and_prompt(tmp_path):
+    decide.Store(tmp_path / "sg", "jev-1", "1").remember({"a": answer("scratch", 0.9)})
+    assert decide.Store(tmp_path / "sg", "jev-2", "1").cached_answer(item("a")) is None
+    assert decide.Store(tmp_path / "sg", "jev-1", "2").cached_answer(item("a")) is None
+
+
+@pytest.mark.parametrize("content", ["{broken", "[1, 2]"])
+def test_damaged_cache_is_deleted(tmp_path, content):  # SG-54
+    (tmp_path / "sg").mkdir()
+    (tmp_path / "sg" / "cache.json").write_text(content)
+    store = decide.Store(tmp_path / "sg", "m", "1")
+    assert store.cache == {}
+    assert not (tmp_path / "sg" / "cache.json").exists()
+
+
+def test_keep_stores_all_blob_ids(tmp_path):  # T-09
+    store = decide.Store(tmp_path / "sg", "m", "1")
+    store.keep([item("folder", blobs=("b1", "b2"))])
+    assert decide.Store(tmp_path / "sg", "m", "1").kept == {"b1", "b2"}
+
+
