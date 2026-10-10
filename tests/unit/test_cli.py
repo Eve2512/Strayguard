@@ -130,3 +130,22 @@ def test_git_error_does_not_block(tmp_path, monkeypatch, capsys):  # SG-85
     monkeypatch.chdir(tmp_path)
     assert check() == 0
     assert "not a git repository" in capsys.readouterr().err
+
+
+def test_install_and_uninstall(repo):
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    assert cli.main(["install"]) == 0
+    assert "# strayguard" in hook.read_text()
+    assert hook.stat().st_mode & 0o111
+    assert cli.main(["uninstall"]) == 0
+    assert not hook.exists()
+
+
+def test_install_keeps_other_hook(repo):  # T-15
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    hook.write_text("#!/bin/sh\necho mine\n")
+    assert cli.main(["install"]) == 1
+    assert hook.read_text() == "#!/bin/sh\necho mine\n"
+    assert cli.main(["uninstall"]) == 0
+    assert hook.exists()
+
