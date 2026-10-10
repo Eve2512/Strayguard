@@ -51,3 +51,45 @@ def test_names_only(repo, stage, monkeypatch):  # SG-36
     items, _, _ = evidence.build_items(git.new_files())
     assert "head" not in items[0].evidence and "binary" not in items[0].evidence
 
+
+def test_head_binary_and_large(repo, stage):
+    stage({"long.py": "".join(f"line {i}\n" for i in range(100)),
+           "logo.png": b"\x89PNG\0\0data",
+           "big.csv": "a,b\n" * 300_000})
+    items = {i.path: i.evidence for i in evidence.build_items(git.new_files())[0]}
+    assert items["long.py"]["head"].count("\n") == 39  # 40 lines
+    assert items["logo.png"]["binary"] is True and "head" not in items["logo.png"]
+    assert items["big.csv"]["size_bytes"] == 1_200_000 and "head" not in items["big.csv"]
+
+
+def test_repo_context(repo, stage):
+    stage({"src/app.py": "x\n"})
+    subprocess.run(["git", "commit", "-qm", "src"], check=True)
+    stage({"src/scratch.py": "y\n"})
+    items, _, top = evidence.build_items(git.new_files())
+    assert top == ["README.md", "src/"]
+    assert items[0].evidence["same_folder"] == ["app.py"]
+
+
+def test_unstage_keeps_file_on_disk(repo, stage):  # T-07 (git part)
+    stage({"scratch.py": "x\n"})
+    (repo / "scratch.py").write_text("changed after git add\n")
+    git.unstage(["scratch.py"])
+    assert staged_paths() == []
+    assert (repo / "scratch.py").exists()
+
+
+def test_gitignore_lines_escaped_and_not_duplicated(repo, stage):  # T-08 (git part)
+    stage({"a[1]*.py": "x\n", "dist/x.js": "y\n"})
+    items = {i.path: i for i in evidence.build_items(git.new_files())[0]}
+    (repo / ".gitignore").write_text("*.log")  # no newline at the end
+    git.add_to_gitignore([items["a[1]*.py"], items["dist/x.js"]])
+    git.add_to_gitignore([items["a[1]*.py"]])
+    assert (repo / ".gitignore").read_text() == "*.log\n/a\\[1]\\*.py\n/dist/x.js\n"
+    assert ".gitignore" in staged_paths()
+
+
+def test_hooks_dir_respects_hooks_path(repo):
+    subprocess.run(["git", "config", "core.hooksPath", ".githooks"], check=True)
+    assert git.hooks_dir() == (repo / ".githooks").resolve()
+
