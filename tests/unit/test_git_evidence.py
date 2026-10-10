@@ -24,3 +24,30 @@ def test_folder_roll_up(repo, stage):  # T-04
     assert items[0].evidence["new_files"] == 11
     assert len(items[0].blob_ids) == 11
 
+
+def test_ten_files_are_not_rolled_up(repo, stage):
+    stage({f"dist/chunk{i}.js": f"var a{i};\n" for i in range(10)})
+    items, total, _ = evidence.build_items(git.new_files())
+    assert total == 10 and not any(i.is_folder for i in items)
+
+
+def test_folder_with_tracked_files_is_not_rolled_up(repo, stage):
+    stage({"src/app.py": "x\n"})
+    subprocess.run(["git", "commit", "-qm", "src"], check=True)
+    stage({f"src/m{i}.py": f"x{i}\n" for i in range(11)})
+    items, _, _ = evidence.build_items(git.new_files())
+    assert not any(i.is_folder for i in items)
+
+
+def test_secret_content_is_never_read(repo, stage):  # T-02
+    stage({".env.local": "SECRET=abc\n"})
+    items, _, _ = evidence.build_items(git.new_files())
+    assert "head" not in items[0].evidence
+
+
+def test_names_only(repo, stage, monkeypatch):  # SG-36
+    monkeypatch.setenv("STRAYGUARD_NAMES_ONLY", "1")
+    stage({"notes.txt": "private\n"})
+    items, _, _ = evidence.build_items(git.new_files())
+    assert "head" not in items[0].evidence and "binary" not in items[0].evidence
+
