@@ -72,5 +72,46 @@ def test_request_shape(server):
     assert "`files.f1`" in body["questions"]["f1"]["instructions"]
 
 
+def test_batches_of_twenty(server):
+    assert len(ask(45)) == 45
+    assert sorted(len(b["questions"]) for _, b in server.requests) == [5, 20, 20]
+
+
+def test_retry_once_then_ok(server, monkeypatch):
+    monkeypatch.setattr(jev, "TOTAL_TIMEOUT", 3.0)  # the retry waits 1 s first
+    server.script = [529]
+    assert len(ask()) == 2
+    assert len(server.requests) == 2
+
+
+def test_retry_only_once(server, monkeypatch):  # T-11
+    monkeypatch.setattr(jev, "TOTAL_TIMEOUT", 3.0)  # the retry waits 1 s first
+    server.script = [529, 529]
+    with pytest.raises(jev.JevError, match="HTTP 529"):
+        ask()
+    assert len(server.requests) == 2
+
+
+@pytest.mark.parametrize("script, message", [
+    ([401], "HTTP 401"), (["slow"], "did not answer"), (["html"], "not JSON"),
+])
+def test_errors(server, script, message):  # T-12, T-16
+    server.script = script
+    with pytest.raises(jev.JevError, match=message) as error:
+        ask()
+    assert KEY not in str(error.value)
+
+
+def test_invalid_answer_is_dropped(server):
+    server.script = ["bad"]
+    assert list(ask()) == ["k1"]
+
+
+def test_no_server(monkeypatch):
+    monkeypatch.setattr(jev, "ENDPOINT", "http://127.0.0.1:1")
+    with pytest.raises(jev.JevError, match="could not reach Jev"):
+        ask()
+
+
  
 
