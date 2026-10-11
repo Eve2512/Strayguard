@@ -1,4 +1,4 @@
-"""Decide which items to flag, and remember answers and kept files"""
+"""Decide which items to flag, and remember answers and kept files (SPEC 7.6, 7.7)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pathlib import Path
 BELONGS = "belongs"
 DEFAULT_THRESHOLD = 0.70
 
+
 @dataclass(frozen=True)
 class Verdict:
     """One flagged item. `probability` is None when a local rule flagged it."""
@@ -18,13 +19,8 @@ class Verdict:
     category: str
     probability: float | None
 
+
 def threshold_from_env() -> float:
-    """Read STRAYGUARD_THRESHOLD (SG-47). Use the default for a bad value."""
-    try:
-        value = float(os.environ.get("STRAYGUARD_THRESHOLD", DEFAULT_THRESHOLD))
-    except ValueError:
-        return DEFAULT_THRESHOLD
-    return value if 0.0 < value <= 1.0 else DEFAULT_THRESHOLDdef threshold_from_env() -> float:
     """Read STRAYGUARD_THRESHOLD (SG-47). Use the default for a bad value."""
     try:
         value = float(os.environ.get("STRAYGUARD_THRESHOLD", DEFAULT_THRESHOLD))
@@ -32,11 +28,13 @@ def threshold_from_env() -> float:
         return DEFAULT_THRESHOLD
     return value if 0.0 < value <= 1.0 else DEFAULT_THRESHOLD
 
+
 def is_flagged(answer: dict, threshold: float) -> bool:
     """SG-46: flag when the selected option is not `belongs` and is likely enough."""
     choice = answer.get("choice")
     probability = answer.get("probabilities", {}).get(choice, 0.0)
     return choice != BELONGS and probability >= threshold
+
 
 def decide(items: list, answers: dict, threshold: float) -> list[Verdict]:
     """Turn Jev answers into verdicts. Items without an answer are not flagged."""
@@ -48,9 +46,10 @@ def decide(items: list, answers: dict, threshold: float) -> list[Verdict]:
             verdicts.append(Verdict(item, choice, answer["probabilities"][choice]))
     return verdicts
 
+
 class Store:
     """The kept list and the answer cache in .git/strayguard/ (SG-50 to SG-54)."""
-    
+
     def __init__(self, state_dir: Path, model: str, prompt_version: str):
         self.dir = state_dir
         self.kept_file = state_dir / "kept"
@@ -102,5 +101,3 @@ class Store:
             os.replace(temporary, path)
         except OSError:
             pass
-
-

@@ -10,6 +10,7 @@ from strayguard import jev
 
 KEY = "secret-test-key-123"
 
+
 class FakeJev(BaseHTTPRequestHandler):
     """Answers with the next item of `script`: 'ok', 'slow', 'bad', 'html' or an HTTP code."""
 
@@ -111,7 +112,3 @@ def test_no_server(monkeypatch):
     monkeypatch.setattr(jev, "ENDPOINT", "http://127.0.0.1:1")
     with pytest.raises(jev.JevError, match="could not reach Jev"):
         ask()
-
-
- 
-

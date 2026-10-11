@@ -1,3 +1,5 @@
+"""Make the items that strayguard sends to Jev (SPEC 7.2, 7.4)."""
+
 from __future__ import annotations
 
 import hashlib

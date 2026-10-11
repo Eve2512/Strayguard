@@ -148,4 +148,3 @@ def test_install_keeps_other_hook(repo):  # T-15
     assert hook.read_text() == "#!/bin/sh\necho mine\n"
     assert cli.main(["uninstall"]) == 0
     assert hook.exists()
-

@@ -3,8 +3,9 @@ import subprocess
 from conftest import staged_paths
 from strayguard import evidence, git
 
+
 def test_new_files_only_status_a(repo, stage):
-  stage ({"src/old.py": "x = 1\n"})
+    stage({"src/old.py": "x = 1\n"})
     subprocess.run(["git", "commit", "-qm", "more"], check=True)
     subprocess.run(["git", "mv", "src/old.py", "src/new.py"], check=True)  # rename: skipped
     (repo / "README.md").write_text("changed\n")                           # modified: skipped
@@ -92,4 +93,3 @@ def test_gitignore_lines_escaped_and_not_duplicated(repo, stage):  # T-08 (git p
 def test_hooks_dir_respects_hooks_path(repo):
     subprocess.run(["git", "config", "core.hooksPath", ".githooks"], check=True)
     assert git.hooks_dir() == (repo / ".githooks").resolve()
-

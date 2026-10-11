@@ -21,4 +21,3 @@ def test_names_that_pass(path):
 
 def test_case_matters():
     assert rules.match(".ds_store") is None
-

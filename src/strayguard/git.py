@@ -1,3 +1,5 @@
+"""All git calls (SPEC 7.1, 7.8, 7.11). No other module runs git."""
+
 from __future__ import annotations
 
 import subprocess
@@ -111,4 +113,3 @@ def add_to_gitignore(items: list) -> None:
             text += "\n"
         gitignore.write_text(text + "\n".join(new_lines) + "\n")
     _in_root("add", "--", ".gitignore")
-

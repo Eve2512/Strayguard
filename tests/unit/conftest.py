@@ -1,3 +1,5 @@
+"""Shared fixtures. The unit tests never use the network or the real TypeSafe API."""
+
 import subprocess
 import sys
 from pathlib import Path

@@ -1,3 +1,5 @@
+"""Command line: install, uninstall and check (SPEC 6, 7.11)."""
+
 from __future__ import annotations
 
 import argparse
@@ -28,7 +30,7 @@ def check() -> int:
     model = os.environ.get("STRAYGUARD_MODEL", jev.DEFAULT_MODEL)
     store = decide.Store(git.state_dir(), model, jev.PROMPT_VERSION)
     new_files = [f for f in new_files if f.blob not in store.kept]
-    items, total = evidence.build_items(new_files)
+    items, total, repo = evidence.build_items(new_files)
     if total > len(items):
         ui.note(f"checked {len(items)} of {total} new items.")
 
@@ -47,7 +49,7 @@ def check() -> int:
             answers[item.key] = cached
     missing = [item for item in to_ask if item.key not in answers]
     if missing:
-        fresh = ask_jev(missing, model)
+        fresh = ask_jev(missing, repo, model)
         store.remember(fresh)
         answers.update(fresh)
 
@@ -57,24 +59,25 @@ def check() -> int:
     return act(verdicts, store)
 
 
-def ask_jev(items: list, model: str) -> dict:
+def ask_jev(items: list, repo: list[str], model: str) -> dict:
     """Ask Jev. On any failure, show one line and return no answers (fail open)."""
     api_key = os.environ.get("TYPESAFE_API_KEY")
     if not api_key:
-        ui.note("no TYPESAFE_API_KEY set, check skipped.")
+        ui.note("no TYPESAFE_API_KEY set, so only the local rules ran.")
         return {}
     try:
-        return jev.ask(items, api_key, model)
+        return jev.ask(items, repo, api_key, model)
     except jev.JevError as error:
-        ui.note(f"{error}, check skipped.")
+        ui.note(f"{error}, so only the local rules ran.")
         return {}
 
 
 def act(verdicts: list, store: decide.Store) -> int:
     """Show the verdicts and do what the user chooses (SG-60 to SG-73)."""
     if not ui.can_prompt():
-        ui.warn(verdicts)
-        return 1 if os.environ.get("STRAYGUARD_STRICT") == "1" else 0
+        strict = os.environ.get("STRAYGUARD_STRICT") == "1"
+        ui.warn(verdicts, blocking=strict)
+        return 1 if strict else 0
 
     choices = ui.prompt(verdicts)
     store.keep(v.item for v in choices["k"])
@@ -111,6 +114,7 @@ def uninstall() -> int:
 
 
 COMMANDS = {"install": install, "uninstall": uninstall, "check": check}
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(

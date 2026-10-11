@@ -66,5 +66,3 @@ def test_keep_stores_all_blob_ids(tmp_path):  # T-09
     store = decide.Store(tmp_path / "sg", "m", "1")
     store.keep([item("folder", blobs=("b1", "b2"))])
     assert decide.Store(tmp_path / "sg", "m", "1").kept == {"b1", "b2"}
-
-

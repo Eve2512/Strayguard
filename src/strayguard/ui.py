@@ -106,12 +106,13 @@ def report(choices: dict) -> None:
         _say(f"  {tick} Added {_files(len(choices['g']), 'file')} to .gitignore and staged .gitignore.")
     removed = len(choices["u"]) + len(choices["g"])
     if removed:
-        _say(f"  {tick} Unstaged {_files(removed, 'file')}. They are still on your disk.")
-    if choices["k"]:
-        _say(f"  {tick} Kept {_files(len(choices['k']), 'file')}. strayguard will not ask about them again.")
+        it = "It is" if removed == 1 else "They are"
+        _say(f"  {tick} Unstaged {_files(removed, 'file')}. {it} still on your disk.")
+    kept = len(choices["k"])
+    if kept:
+        it = "it" if kept == 1 else "them"
+        _say(f"  {tick} Kept {_files(kept, 'file')}. strayguard will not ask about {it} again.")
     if removed:
         _say()
         _say("  Commit stopped so you can check. Run git commit again.")
     _say()
-
-

@@ -1,3 +1,5 @@
+"""The Jev request: batches, timeout and retry (SPEC 7.5, 7.10, 8)."""
+
 from __future__ import annotations
 
 import json
@@ -114,4 +116,3 @@ def _post(body: dict, api_key: str, deadline: float) -> dict:
             raise JevError(f"could not reach Jev ({error.reason})") from None
         except ValueError:
             raise JevError("Jev sent a response that is not JSON") from None
-
