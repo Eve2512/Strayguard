@@ -8,4 +8,46 @@ on:
 permissions:
   contents: read
 
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - os: macos-latest
+            python: "3.14"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run the unit tests
+        run: uv run --no-project --with pytest pytest -v
+
+  build:
+    name: Build the package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - name: Build the wheel and the source archive
+        run: uv build
+      - name: Check the package metadata
+        run: |
+          unzip -p dist/*.whl '*/METADATA' > METADATA
+          grep -q '^License-Expression: MIT' METADATA
+          grep -q '^Keywords: ' METADATA
+          grep -q '^Requires-Python: >=3.9' METADATA
+          echo "Metadata OK"
   
