@@ -43,8 +43,6 @@ You need Python 3.9+ and a [TypeSafe API key](https://console.typesafe.ai/keys).
 pipx install strayguard
 ```
 
-Until the first PyPI release, install it from GitHub instead:
-
 ```bash
 pipx install git+https://github.com/Eve2512/Strayguard
 ```
