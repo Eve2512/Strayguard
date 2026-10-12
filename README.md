@@ -219,5 +219,5 @@ GitHub Actions runs the same tests on Python 3.9 to 3.14 for each push to `main`
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/Eve2512/Strayguard/blob/main/LICENSE).
 
