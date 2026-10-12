@@ -66,7 +66,7 @@ def warn(verdicts: list, blocking: bool) -> None:
     _header(verdicts, f"may not belong ({status})")
     paths = " ".join(shlex.quote(v.item.path) for v in verdicts)
     _say()
-    _say("  To unstage them:")
+    _say("  To unstage it:" if len(verdicts) == 1 else "  To unstage them:")
     _say(f"    git rm --cached -r -- {paths}")
     _say()
 
