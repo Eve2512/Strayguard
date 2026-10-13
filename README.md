@@ -182,6 +182,24 @@ It never sends:
 
 TypeSafe says it does not train models on customer data. See its [legal page](https://docs.typesafe.ai/legal).
 
+## Accuracy
+
+`tests/eval/run_eval.py` stages 100 new files in a sample project (60 that belong, 40 strays) and runs them through the same steps as a commit, against the real API. The result on 2026-10-12 with `jev-1.13.0`:
+
+| Measure | Result | Target |
+|---|---|---|
+| False alarms (files that belong, but flagged) | 0 of 60 | at most 5% |
+| Strays caught | 40 of 40 | at least 80% |
+| Changes when the order of the options changes | 0 | at most 2 |
+
+**Limitation:** the same author wrote the sample files and the category descriptions, so the sample may fit the descriptions better than real-world files do. If strayguard gets a file wrong for you, please open an issue with the file name and what it said. Each report becomes a new test case.
+
+To run it yourself, set `TYPESAFE_API_KEY` first, then run this from the repo folder (it costs less than one cent):
+
+```bash
+uv run --no-project python tests/eval/run_eval.py
+```
+
 ## Cost and speed
 
 - A typical commit costs less than $0.0001.
