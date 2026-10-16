@@ -27,8 +27,11 @@ def check() -> int:
     if not new_files:
         return 0
 
-    model = os.environ.get("STRAYGUARD_MODEL", jev.DEFAULT_MODEL)
-    store = decide.Store(git.state_dir(), model, jev.PROMPT_VERSION)
+    provider = jev.pick_provider(os.environ)
+    model = os.environ.get("STRAYGUARD_MODEL", provider.default_model if provider else "")
+    # SG-51: a different provider or model gives different answers, so it gets its own cache.
+    store = decide.Store(git.state_dir(), f"{provider and provider.name}/{model}",
+                         jev.PROMPT_VERSION)
     new_files = [f for f in new_files if f.blob not in store.kept]
     items, total, repo = evidence.build_items(new_files)
     if total > len(items):
@@ -49,7 +52,7 @@ def check() -> int:
             answers[item.key] = cached
     missing = [item for item in to_ask if item.key not in answers]
     if missing:
-        fresh = ask_jev(missing, repo, model)
+        fresh = ask_jev(missing, repo, provider, model)
         store.remember(fresh)
         answers.update(fresh)
 
@@ -59,14 +62,20 @@ def check() -> int:
     return act(verdicts, store)
 
 
-def ask_jev(items: list, repo: list[str], model: str) -> dict:
+def ask_jev(items: list, repo: list[str], provider: jev.Provider | None, model: str) -> dict:
     """Ask Jev. On any failure, show one line and return no answers (fail open)."""
-    api_key = os.environ.get("TYPESAFE_API_KEY")
+    if provider is None:
+        ui.note("unknown STRAYGUARD_PROVIDER (use typesafe or openrouter), "
+                "so only the local rules ran.")
+        return {}
+    api_key = os.environ.get(provider.key_var)
     if not api_key:
-        ui.note("no TYPESAFE_API_KEY set, so only the local rules ran.")
+        names = provider.key_var if "STRAYGUARD_PROVIDER" in os.environ else \
+            " or ".join(p.key_var for p in jev.PROVIDERS.values())
+        ui.note(f"no {names} set, so only the local rules ran.")
         return {}
     try:
-        return jev.ask(items, repo, api_key, model)
+        return jev.ask(items, repo, api_key, model, provider.endpoint)
     except jev.JevError as error:
         ui.note(f"{error}, so only the local rules ran.")
         return {}

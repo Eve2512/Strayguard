@@ -54,7 +54,7 @@ def label_of(item) -> str:
     return labels.pop()
 
 
-def judge(items, repo_top, api_key, model):
+def judge(items, repo_top, api_key, model, endpoint):
     """The same steps as `strayguard check`, without the cache. Returns flags and raw answers."""
     flags, to_ask = {}, []
     for item in items:
@@ -63,24 +63,26 @@ def judge(items, repo_top, api_key, model):
             flags[item.path] = (category, None)
         else:
             to_ask.append(item)
-    answers = jev.ask(to_ask, repo_top, api_key, model)
+    answers = jev.ask(to_ask, repo_top, api_key, model, endpoint)
     for v in decide.decide(to_ask, answers, decide.threshold_from_env()):
         flags[v.item.path] = (v.category, v.probability)
     return flags, {i.path: answers.get(i.key) for i in to_ask}
 
 
-def model_version(api_key: str, model: str) -> str:
+def model_version(api_key: str, model: str, endpoint: str) -> str:
     body = {"model": model, "state": "Hello there!",
             "questions": {"q": {"type": "noul", "instructions": "Is this text a greeting?"}}}
-    return jev._post(body, api_key, time.monotonic() + 20).get("model", "unknown")
+    return jev._post(endpoint, body, api_key, time.monotonic() + 20).get("model", "unknown")
 
 
 def main() -> int:
-    api_key = os.environ.get("TYPESAFE_API_KEY")
+    provider = jev.pick_provider(os.environ)
+    api_key = provider and os.environ.get(provider.key_var)
     if not api_key:
-        print("Set TYPESAFE_API_KEY first.")
+        print("Set TYPESAFE_API_KEY or OPENROUTER_API_KEY first.")
         return 1
-    model = os.environ.get("STRAYGUARD_MODEL", jev.DEFAULT_MODEL)
+    model = os.environ.get("STRAYGUARD_MODEL", provider.default_model)
+    endpoint = provider.endpoint
     jev.REQUEST_TIMEOUT, jev.TOTAL_TIMEOUT = 30.0, 60.0  # 100 items need more time than one commit
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -92,14 +94,14 @@ def main() -> int:
         labels = {i.path: label_of(i) for i in items}
 
         started = time.monotonic()
-        flags, answers = judge(items, repo_top, api_key, model)
+        flags, answers = judge(items, repo_top, api_key, model, endpoint)
         seconds = time.monotonic() - started
 
         original = dict(jev.OPTIONS)
         names = list(original)
         jev.OPTIONS = {name: original[name] for name in names[:1] + names[:0:-1]}  # T-23
         try:
-            flags_reordered, _ = judge(items, repo_top, api_key, model)
+            flags_reordered, _ = judge(items, repo_top, api_key, model, endpoint)
         finally:
             jev.OPTIONS = original
 
@@ -109,7 +111,8 @@ def main() -> int:
     missed = [p for p in strays if p not in flags]
     order_changes = sorted(set(flags) ^ set(flags_reordered))
 
-    print(f"Model: {model_version(api_key, model)}  (requested {model})")
+    print(f"Provider: {provider.name}  Model: {model_version(api_key, model, endpoint)}  "
+          f"(requested {model})")
     print(f"Items: {len(items)}  ({len(belongs)} belong, {len(strays)} stray)  "
           f"Jev time: {seconds:.1f} s for {len(answers)} items")
     print()
