@@ -1,4 +1,4 @@
-"""The Jev request: batches, timeout and retry (SPEC 7.5, 7.10, 8)."""
+"""The Jev request: provider, batches, timeout and retry (SPEC 7.5, 7.10, 8)."""
 
 from __future__ import annotations
 
@@ -8,11 +8,10 @@ import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, wait
+from typing import Mapping, NamedTuple
 
 from . import __version__
 
-ENDPOINT = "https://api.typesafe.ai/v1/systemone"
-DEFAULT_MODEL = "jev-latest"
 PROMPT_VERSION = "1"
 BATCH_SIZE = 20
 PARALLEL_REQUESTS = 5
@@ -37,16 +36,41 @@ OPTIONS = {
 }
 
 
+class Provider(NamedTuple):
+    name: str
+    endpoint: str
+    key_var: str
+    default_model: str
+
+
+# SG-40. Both providers take the same request and send the same answers.
+PROVIDERS = {
+    "typesafe": Provider("typesafe", "https://api.typesafe.ai/v1/systemone",
+                         "TYPESAFE_API_KEY", "jev-latest"),
+    "openrouter": Provider("openrouter", "https://openrouter.ai/api/alpha/decisions",
+                           "OPENROUTER_API_KEY", "~typesafe/jev-latest"),
+}
+
+
+def pick_provider(env: Mapping[str, str]) -> Provider | None:
+    """SG-49: STRAYGUARD_PROVIDER wins. Else the first provider with a key. None if unknown."""
+    name = env.get("STRAYGUARD_PROVIDER", "").strip().lower()
+    if name:
+        return PROVIDERS.get(name)
+    return next((p for p in PROVIDERS.values() if env.get(p.key_var)), PROVIDERS["typesafe"])
+
+
 class JevError(Exception):
     pass
 
 
-def ask(items: list, repo: list[str], api_key: str, model: str) -> dict:
+def ask(items: list, repo: list[str], api_key: str, model: str, endpoint: str) -> dict:
     """Ask one Choice question for each item. Return {item.key: answer}."""
     deadline = time.monotonic() + TOTAL_TIMEOUT
     batches = [items[i:i + BATCH_SIZE] for i in range(0, len(items), BATCH_SIZE)]
     pool = ThreadPoolExecutor(max_workers=PARALLEL_REQUESTS)
-    futures = [pool.submit(_ask_batch, b, repo, api_key, model, deadline) for b in batches]
+    futures = [pool.submit(_ask_batch, b, repo, api_key, model, endpoint, deadline)
+               for b in batches]
     done, not_done = wait(futures, timeout=TOTAL_TIMEOUT)
     pool.shutdown(wait=False, cancel_futures=True)
     if not_done:
@@ -57,7 +81,8 @@ def ask(items: list, repo: list[str], api_key: str, model: str) -> dict:
     return answers
 
 
-def _ask_batch(items: list, repo: list[str], api_key: str, model: str, deadline: float) -> dict:
+def _ask_batch(items: list, repo: list[str], api_key: str, model: str, endpoint: str,
+               deadline: float) -> dict:
     ids = {f"f{n}": item for n, item in enumerate(items, start=1)}
     body = {
         "model": model,
@@ -65,7 +90,7 @@ def _ask_batch(items: list, repo: list[str], api_key: str, model: str, deadline:
                   "files": {fid: item.evidence for fid, item in ids.items()}},
         "questions": {fid: _question(fid, item.is_folder) for fid, item in ids.items()},
     }
-    response = _post(body, api_key, deadline)
+    response = _post(endpoint, body, api_key, deadline)
     answers = {}
     for fid, answer in response.get("answers", {}).items():
         if fid in ids and _is_valid(answer):
@@ -87,10 +112,10 @@ def _is_valid(answer: dict) -> bool:
     return answer.get("choice") in OPTIONS and isinstance(answer.get("probabilities"), dict)
 
 
-def _post(body: dict, api_key: str, deadline: float) -> dict:
+def _post(endpoint: str, body: dict, api_key: str, deadline: float) -> dict:
     """SG-40, SG-81, SG-82. The API key never appears in an error message."""
     request = urllib.request.Request(
-        ENDPOINT,
+        endpoint,
         data=json.dumps(body).encode(),
         headers={"Authorization": f"Bearer {api_key}",
                  "Content-Type": "application/json",

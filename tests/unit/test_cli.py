@@ -4,6 +4,7 @@ from conftest import staged_paths
 from strayguard import cli, jev, ui
 
 GUESSES = {"test_fix2.py": ("scratch", 0.91), "debug.json": ("output-dump", 0.87)}
+REQUESTS = []  # (api_key, model, endpoint) of each fake Jev call
 
 
 @pytest.fixture
@@ -11,8 +12,9 @@ def fake_jev(monkeypatch):
     """Replace the Jev request. Count the items that it receives."""
     calls = []
 
-    def ask(items, repo, api_key, model):
+    def ask(items, repo, api_key, model, endpoint):
         calls.append([i.path for i in items])
+        REQUESTS.append((api_key, model, endpoint))
         answers = {}
         for i in items:
             choice, probability = GUESSES.get(i.path, ("belongs", 0.95))
@@ -61,9 +63,37 @@ def test_no_key_still_runs_rules(repo, stage, capsys):  # T-10
     stage({".env.local": "S=1\n", "test_fix2.py": "x\n"})
     assert check() == 0
     err = capsys.readouterr().err
-    assert "no TYPESAFE_API_KEY set" in err
+    assert "no TYPESAFE_API_KEY or OPENROUTER_API_KEY set" in err
     assert ".env.local" in err and "rule" in err
     assert "test_fix2.py" not in err
+
+
+def test_openrouter_key_uses_openrouter(repo, stage, fake_jev, monkeypatch):  # T-31
+    monkeypatch.delenv("TYPESAFE_API_KEY")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    stage({"test_fix2.py": "x\n"})
+    check()
+    assert REQUESTS[-1] == ("or-key", "~typesafe/jev-latest",
+                               "https://openrouter.ai/api/alpha/decisions")
+
+
+def test_unknown_provider_still_runs_rules(repo, stage, fake_jev, monkeypatch, capsys):  # T-32
+    monkeypatch.setenv("STRAYGUARD_PROVIDER", "vercel")
+    stage({".env.local": "S=1\n", "test_fix2.py": "x\n"})
+    assert check() == 0
+    err = capsys.readouterr().err
+    assert "unknown STRAYGUARD_PROVIDER" in err and ".env.local" in err
+    assert fake_jev == []
+
+
+def test_each_provider_has_its_own_cache(repo, stage, fake_jev, monkeypatch):  # T-33
+    stage({"src/app.py": "x\n"})
+    check()
+    check()
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.setenv("STRAYGUARD_PROVIDER", "openrouter")
+    check()
+    assert fake_jev == [["src/app.py"], ["src/app.py"]]
 
 
 def test_rule_files_are_not_sent(repo, stage, fake_jev):  # T-02

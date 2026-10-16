@@ -47,7 +47,7 @@ def server(monkeypatch):
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), FakeJev)
     threading.Thread(target=httpd.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
     FakeJev.script, FakeJev.requests = [], []
-    monkeypatch.setattr(jev, "ENDPOINT", f"http://127.0.0.1:{httpd.server_port}")
+    FakeJev.url = f"http://127.0.0.1:{httpd.server_port}"
     monkeypatch.setattr(jev, "REQUEST_TIMEOUT", 0.4)
     monkeypatch.setattr(jev, "TOTAL_TIMEOUT", 0.5)
     yield FakeJev
@@ -59,8 +59,8 @@ def items(count):
             for i in range(count)]
 
 
-def ask(count=2):
-    return jev.ask(items(count), ["src/"], KEY, "jev-latest")
+def ask(count=2, endpoint=None):
+    return jev.ask(items(count), ["src/"], KEY, "jev-latest", endpoint or FakeJev.url)
 
 
 def test_request_shape(server):
@@ -108,7 +108,19 @@ def test_invalid_answer_is_dropped(server):
     assert list(ask()) == ["k1"]
 
 
-def test_no_server(monkeypatch):
-    monkeypatch.setattr(jev, "ENDPOINT", "http://127.0.0.1:1")
+def test_no_server():
     with pytest.raises(jev.JevError, match="could not reach Jev"):
-        ask()
+        ask(endpoint="http://127.0.0.1:1")
+
+
+@pytest.mark.parametrize("env, expected", [
+    ({}, "typesafe"),
+    ({"TYPESAFE_API_KEY": "k"}, "typesafe"),
+    ({"OPENROUTER_API_KEY": "k"}, "openrouter"),
+    ({"TYPESAFE_API_KEY": "k", "OPENROUTER_API_KEY": "k"}, "typesafe"),
+    ({"TYPESAFE_API_KEY": "k", "STRAYGUARD_PROVIDER": "OpenRouter"}, "openrouter"),
+    ({"STRAYGUARD_PROVIDER": "vercel"}, None),
+])
+def test_pick_provider(env, expected):  # T-30
+    provider = jev.pick_provider(env)
+    assert (provider and provider.name) == expected
