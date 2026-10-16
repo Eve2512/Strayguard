@@ -37,7 +37,7 @@ Jev never writes text(not good for that anyways) It only picks a category and re
 
 ### Install
 
-You need Python 3.9+ and a [TypeSafe API key](https://console.typesafe.ai/keys).
+You need Python 3.9+ and an API key from [TypeSafe](https://console.typesafe.ai/keys) or [OpenRouter](https://openrouter.ai/settings/keys).
 
 ```bash
 pipx install strayguard
@@ -48,7 +48,7 @@ pipx install git+https://github.com/Eve2512/Strayguard
 ```
 
 ```bash
-export TYPESAFE_API_KEY=your-key
+export TYPESAFE_API_KEY=your-key     # or: export OPENROUTER_API_KEY=your-key
 ```
 
 Then, inside your repo:
@@ -151,21 +151,23 @@ These files are never sent to Jev, so they show `rule` instead of a percentage:
 It prints one line, still runs its local rules, and lets the commit through:
 
 ```text
-strayguard: no TYPESAFE_API_KEY set, so only the local rules ran.
+strayguard: no TYPESAFE_API_KEY or OPENROUTER_API_KEY set, so only the local rules ran.
 strayguard: Jev did not answer in 5 s, so only the local rules ran.
 ```
 
 ## Settings
 
-Everything is optional except the key.
+Everything is optional except one key.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `TYPESAFE_API_KEY` | none | **Required.** Your TypeSafe API key. |
+| `TYPESAFE_API_KEY` | none | Your TypeSafe API key. You need this key or `OPENROUTER_API_KEY`. |
+| `OPENROUTER_API_KEY` | none | Your OpenRouter API key. strayguard uses it when `TYPESAFE_API_KEY` is not set. |
+| `STRAYGUARD_PROVIDER` | by key | `typesafe` or `openrouter`. Use it when both keys are set. |
 | `STRAYGUARD=off` | `on` | Skip the check for one commit: `STRAYGUARD=off git commit ...` |
 | `STRAYGUARD_STRICT=1` | `0` | Block the commit when strayguard can't ask you, such as in CI or with agents. |
 | `STRAYGUARD_THRESHOLD` | `0.70` | How sure Jev must be before strayguard warns you. |
-| `STRAYGUARD_MODEL` | `jev-latest` | Pin a version, for example `jev-1.13.0`, to keep answers stable. |
+| `STRAYGUARD_MODEL` | `jev-latest` (TypeSafe), `~typesafe/jev-latest` (OpenRouter) | Pin a version, for example `jev-1.13.0` or `typesafe/jev-1.13`, to keep answers stable. On OpenRouter you can also try [other decision models](https://openrouter.ai/models?output_modalities=decisions). |
 | `STRAYGUARD_NAMES_ONLY=1` | `0` | Send only file names and sizes, never content. |
 
 You can also skip every hook for one commit with `git commit --no-verify`.
@@ -182,6 +184,8 @@ It never sends:
 
 TypeSafe says it does not train models on customer data. See its [legal page](https://docs.typesafe.ai/legal).
 
+With `OPENROUTER_API_KEY`, the same data goes to OpenRouter, and OpenRouter sends it to the company that runs the model. See OpenRouter's [privacy page](https://openrouter.ai/privacy).
+
 ## Accuracy
 
 `tests/eval/run_eval.py` stages 100 new files in a sample project (60 that belong, 40 strays) and runs them through the same steps as a commit, against the real API. The result on 2026-10-12 with `jev-1.13.0`:
@@ -194,7 +198,7 @@ TypeSafe says it does not train models on customer data. See its [legal page](ht
 
 **Limitation:** the same author wrote the sample files and the category descriptions, so the sample may fit the descriptions better than real-world files do. If strayguard gets a file wrong for you, please open an issue with the file name and what it said. Each report becomes a new test case.
 
-To run it yourself, set `TYPESAFE_API_KEY` first, then run this from the repo folder (it costs less than one cent):
+To run it yourself, set `TYPESAFE_API_KEY` or `OPENROUTER_API_KEY` first, then run this from the repo folder (it costs less than one cent):
 
 ```bash
 uv run --no-project python tests/eval/run_eval.py
