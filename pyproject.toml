@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "strayguard"
-version = "0.1.0"
+version = "0.2.0"
 description = "A git pre-commit hook that asks TypeSafe Jev whether each new file belongs in your repo."
 readme = "README.md"
 requires-python = ">=3.9"
